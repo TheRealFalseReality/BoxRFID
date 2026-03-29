@@ -77,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return Scaffold(
           extendBodyBehindAppBar: true,
+          extendBody: true,
           backgroundColor: Colors.transparent,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
@@ -104,95 +105,103 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          body: AnimatedContainer(
-            duration: const Duration(milliseconds: 450),
-            curve: Curves.easeInOut,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [_bgLight(hex), _bgDark(hex)],
-              ),
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, kToolbarHeight + 8, 16, 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // NFC unavailable warning
-                    if (_nfcChecked && !_nfcAvailable)
-                      _WarningBanner(message: tr(lang, 'nfcNotAvailable')),
-                    // Manufacturer selector (optional)
-                    if (provider.settings.useManufacturer)
-                      _GlassCard(
-                        title: tr(lang, 'manufacturerLabel'),
-                        child: _ManufacturerDropdown(lang: lang),
-                      ),
-                    // Material selector
-                    _GlassCard(
-                      title: tr(lang, 'materialLabel'),
-                      child: _MaterialDropdown(lang: lang),
-                    ),
-                    // Color selector
-                    _GlassCard(
-                      title: tr(lang, 'colorLabel'),
-                      child: ColorGridWidget(
-                        colors: kDefaultColors,
-                        selectedHex: provider.selectedColorHex,
-                        language: lang,
-                        onColorSelected: (h) => provider.selectColor(h),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    // Write button
-                    _ActionButton(
-                      label: tr(lang, 'writeBtn'),
-                      color: const Color(0xFF4CAF50),
-                      onPressed: provider.isBusy
-                          ? null
-                          : () => _writeTag(context, provider, lang),
-                    ),
-                    const SizedBox(height: 10),
-                    // Read button
-                    _ActionButton(
-                      label: tr(lang, 'readBtn'),
-                      color: const Color(0xFF2196F3),
-                      onPressed: provider.isBusy
-                          ? null
-                          : () => _readTag(context, provider, lang),
-                    ),
-                    const SizedBox(height: 10),
-                    // Auto-detect toggle
-                    Center(child: _AutoDetectButton(lang: lang)),
-                    const SizedBox(height: 16),
-                    // Loading indicator
-                    if (provider.isBusy)
-                      Center(
-                        child: Column(
-                          children: [
-                            const CircularProgressIndicator(
-                              strokeWidth: 3,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Color(0xFF667eea),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              tr(lang, 'loadingText'),
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      ),
-                    // Status message
-                    if (!provider.isBusy && provider.statusMessageKey != null)
-                      _StatusMessage(lang: lang),
-                  ],
+          body: Stack(
+            children: [
+              // Full-screen animated gradient — always fills the whole window
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 450),
+                curve: Curves.easeInOut,
+                width: double.infinity,
+                height: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [_bgLight(hex), _bgDark(hex)],
+                  ),
                 ),
               ),
-            ),
+              // Scrollable content on top of the gradient
+              SafeArea(
+                bottom: false,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, kToolbarHeight + 8, 16, 48),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // NFC unavailable warning
+                      if (_nfcChecked && !_nfcAvailable)
+                        _WarningBanner(message: tr(lang, 'nfcNotAvailable')),
+                      // Manufacturer selector (optional)
+                      if (provider.settings.useManufacturer)
+                        _GlassCard(
+                          title: tr(lang, 'manufacturerLabel'),
+                          child: _ManufacturerDropdown(lang: lang),
+                        ),
+                      // Material selector
+                      _GlassCard(
+                        title: tr(lang, 'materialLabel'),
+                        child: _MaterialDropdown(lang: lang),
+                      ),
+                      // Color selector
+                      _GlassCard(
+                        title: tr(lang, 'colorLabel'),
+                        child: ColorGridWidget(
+                          colors: kDefaultColors,
+                          selectedHex: provider.selectedColorHex,
+                          language: lang,
+                          onColorSelected: (h) => provider.selectColor(h),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      // Write button
+                      _ActionButton(
+                        label: tr(lang, 'writeBtn'),
+                        color: const Color(0xFF4CAF50),
+                        onPressed: provider.isBusy
+                            ? null
+                            : () => _writeTag(context, provider, lang),
+                      ),
+                      const SizedBox(height: 10),
+                      // Read button
+                      _ActionButton(
+                        label: tr(lang, 'readBtn'),
+                        color: const Color(0xFF2196F3),
+                        onPressed: provider.isBusy
+                            ? null
+                            : () => _readTag(context, provider, lang),
+                      ),
+                      const SizedBox(height: 10),
+                      // Auto-detect toggle
+                      Center(child: _AutoDetectButton(lang: lang)),
+                      const SizedBox(height: 16),
+                      // Loading indicator
+                      if (provider.isBusy)
+                        Center(
+                          child: Column(
+                            children: [
+                              const CircularProgressIndicator(
+                                strokeWidth: 3,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF667eea),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                tr(lang, 'loadingText'),
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                      // Status message
+                      if (!provider.isBusy && provider.statusMessageKey != null)
+                        _StatusMessage(lang: lang),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },
