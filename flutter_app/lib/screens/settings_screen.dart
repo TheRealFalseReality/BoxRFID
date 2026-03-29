@@ -3,12 +3,19 @@
 // Author: Tinkerbarn
 // License: CC BY-NC-SA 4.0 (SPDX-License-Identifier: CC-BY-NC-SA-4.0)
 
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+
 import '../data/defaults.dart';
 import '../data/translations.dart';
 import '../models/app_settings.dart';
 import '../providers/app_provider.dart';
+import '../services/cfg_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -175,6 +182,8 @@ class _MaterialsTabState extends State<_MaterialsTab> {
   final _nameController = TextEditingController();
   int? _selectedCode;
   bool _showWarning = false;
+  String? _validationError;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -189,6 +198,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
       _nameController.clear();
       _selectedCode = null;
       _showWarning = false;
+      _validationError = null;
     });
   }
 
@@ -210,6 +220,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
       _nameController.text = name;
       _selectedCode = code;
       _showWarning = false;
+      _validationError = null;
     });
   }
 
@@ -218,12 +229,23 @@ class _MaterialsTabState extends State<_MaterialsTab> {
       _isAdding = false;
       _editingCode = null;
       _showWarning = false;
+      _validationError = null;
     });
   }
 
   Future<void> _save(AppProvider provider) async {
     final name = _nameController.text.trim();
-    if (name.isEmpty || _selectedCode == null) return;
+    if (name.isEmpty) {
+      setState(() =>
+          _validationError = tr(widget.lang, 'materialNameRequired'));
+      return;
+    }
+    if (_selectedCode == null) {
+      setState(() =>
+          _validationError = tr(widget.lang, 'materialCodeRequired'));
+      return;
+    }
+    setState(() => _validationError = null);
     final updated = Map<int, String>.from(provider.settings.materials);
     updated[_selectedCode!] = name;
     await provider.updateSettings(
@@ -248,7 +270,102 @@ class _MaterialsTabState extends State<_MaterialsTab> {
         provider.settings.copyWith(materials: updated));
   }
 
-  Future<void> _reset(AppProvider provider) async {
+  Future<void> _importFromCfg(AppProvider provider) async {
+    setState(() => _isLoading = true);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.first;
+      String? content;
+      if (file.bytes != null) {
+        content = utf8.decode(file.bytes!);
+      } else if (file.path != null) {
+        content = await File(file.path!).readAsString();
+      }
+      if (content == null) return;
+
+      final parsed = CfgService.parseCfg(content);
+      if (parsed == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(tr(widget.lang, 'importCfgError')),
+              backgroundColor: const Color(0xFFDC3545)),
+        );
+        return;
+      }
+
+      final importedMaterials = parsed['materials']!;
+      final importedManufacturers = parsed['manufacturers']!;
+
+      if (!mounted) return;
+      final confirmed = await _showConfirmDialog(
+        context,
+        title: tr(widget.lang, 'importCfgConfirmTitle'),
+        message: tr(widget.lang, 'importCfgConfirmMsg'),
+        confirmLabel: tr(widget.lang, 'confirmMaterialWarningBtn'),
+        cancelLabel: tr(widget.lang, 'cancelMaterialWarningBtn'),
+      );
+      if (confirmed != true) return;
+
+      final newSettings = provider.settings.copyWith(
+        materials: importedMaterials,
+        manufacturers: importedManufacturers.isEmpty
+            ? null
+            : importedManufacturers,
+      );
+      await provider.updateSettings(newSettings);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(tr(widget.lang, 'importCfgSuccess')),
+            backgroundColor: const Color(0xFF28a745)),
+      );
+    } catch (e) {
+      debugPrint('ImportCfg error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(tr(widget.lang, 'importCfgError')),
+            backgroundColor: const Color(0xFFDC3545)),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _exportAsCfg(AppProvider provider) async {
+    setState(() => _isLoading = true);
+    try {
+      final content = CfgService.generateCfg(
+        provider.settings.materials,
+        provider.settings.manufacturers,
+      );
+      final file = await CfgService.writeTempCfgFile(content);
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'official_filas_list.cfg',
+      );
+    } catch (e) {
+      debugPrint('ExportCfg error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(tr(widget.lang, 'exportCfgError')),
+            backgroundColor: const Color(0xFFDC3545)),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _resetMaterials(AppProvider provider) async {
     final confirmed = await _showConfirmDialog(
       context,
       title: tr(widget.lang, 'resetMaterialsBtn'),
@@ -324,6 +441,11 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                     flex: 2,
                     child: TextField(
                       controller: _nameController,
+                      onChanged: (_) {
+                        if (_validationError != null) {
+                          setState(() => _validationError = null);
+                        }
+                      },
                       decoration: InputDecoration(
                         hintText: tr(lang, 'materialNamePlaceholder'),
                         border: OutlineInputBorder(
@@ -344,11 +466,22 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                           : provider.settings.materials.keys.toSet(),
                       selectedCode: _selectedCode,
                       hint: tr(lang, 'codeSelectPlaceholder'),
-                      onChanged: (val) => setState(() => _selectedCode = val),
+                      onChanged: (val) => setState(() {
+                        _selectedCode = val;
+                        if (_validationError != null) _validationError = null;
+                      }),
                     ),
                   ),
                 ],
               ),
+              if (_validationError != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  _validationError!,
+                  style: const TextStyle(
+                      color: Color(0xFFDC3545), fontSize: 12),
+                ),
+              ],
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -375,9 +508,39 @@ class _MaterialsTabState extends State<_MaterialsTab> {
               ),
             const SizedBox(height: 4),
             ElevatedButton(
-              onPressed: () => _reset(provider),
+              onPressed: () => _resetMaterials(provider),
               style: _purpleBtnStyle(),
               child: Text(tr(lang, 'resetMaterialsBtn')),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed:
+                        _isLoading ? null : () => _importFromCfg(provider),
+                    style: _tealBtnStyle(),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white),
+                          )
+                        : Text(tr(lang, 'importCfgBtn')),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed:
+                        _isLoading ? null : () => _exportAsCfg(provider),
+                    style: _orangeBtnStyle(),
+                    child: Text(tr(lang, 'exportCfgBtn')),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -402,6 +565,7 @@ class _ManufacturersTabState extends State<_ManufacturersTab> {
   final _nameController = TextEditingController();
   int? _selectedCode;
   bool _showWarning = false;
+  String? _validationError;
 
   @override
   void dispose() {
@@ -416,6 +580,7 @@ class _ManufacturersTabState extends State<_ManufacturersTab> {
       _nameController.clear();
       _selectedCode = null;
       _showWarning = false;
+      _validationError = null;
     });
   }
 
@@ -437,6 +602,7 @@ class _ManufacturersTabState extends State<_ManufacturersTab> {
       _nameController.text = name;
       _selectedCode = code;
       _showWarning = false;
+      _validationError = null;
     });
   }
 
@@ -445,12 +611,23 @@ class _ManufacturersTabState extends State<_ManufacturersTab> {
       _isAdding = false;
       _editingCode = null;
       _showWarning = false;
+      _validationError = null;
     });
   }
 
   Future<void> _save(AppProvider provider) async {
     final name = _nameController.text.trim();
-    if (name.isEmpty || _selectedCode == null) return;
+    if (name.isEmpty) {
+      setState(() =>
+          _validationError = tr(widget.lang, 'materialNameRequired'));
+      return;
+    }
+    if (_selectedCode == null) {
+      setState(() =>
+          _validationError = tr(widget.lang, 'materialCodeRequired'));
+      return;
+    }
+    setState(() => _validationError = null);
     final updated = Map<int, String>.from(provider.settings.manufacturers);
     updated[_selectedCode!] = name;
     await provider.updateSettings(
@@ -548,6 +725,11 @@ class _ManufacturersTabState extends State<_ManufacturersTab> {
                     flex: 2,
                     child: TextField(
                       controller: _nameController,
+                      onChanged: (_) {
+                        if (_validationError != null) {
+                          setState(() => _validationError = null);
+                        }
+                      },
                       decoration: InputDecoration(
                         hintText: tr(lang, 'manufacturerNamePlaceholder'),
                         border: OutlineInputBorder(
@@ -568,11 +750,22 @@ class _ManufacturersTabState extends State<_ManufacturersTab> {
                           : provider.settings.manufacturers.keys.toSet(),
                       selectedCode: _selectedCode,
                       hint: tr(lang, 'codeSelectPlaceholder'),
-                      onChanged: (val) => setState(() => _selectedCode = val),
+                      onChanged: (val) => setState(() {
+                        _selectedCode = val;
+                        if (_validationError != null) _validationError = null;
+                      }),
                     ),
                   ),
                 ],
               ),
+              if (_validationError != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  _validationError!,
+                  style: const TextStyle(
+                      color: Color(0xFFDC3545), fontSize: 12),
+                ),
+              ],
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -957,6 +1150,18 @@ ButtonStyle _redBtnStyle() => ElevatedButton.styleFrom(
 
 ButtonStyle _purpleBtnStyle() => ElevatedButton.styleFrom(
       backgroundColor: const Color(0xFF6F42C1),
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+    );
+
+ButtonStyle _tealBtnStyle() => ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFF17A2B8),
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+    );
+
+ButtonStyle _orangeBtnStyle() => ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFFE67E22),
       foregroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
     );
