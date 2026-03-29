@@ -35,21 +35,38 @@ class TagInfoDialog extends StatelessWidget {
         : '? (${tagData.colorCode})';
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              tr(language, 'tagInfoTitle'),
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF667eea).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.nfc_rounded,
+                      size: 20, color: Color(0xFF667eea)),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  tr(language, 'tagInfoTitle'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Color(0xFF1C1C2E),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             _InfoRow(
               label: tr(language, 'material'),
               value: '$materialName  (${tagData.materialCode})',
@@ -57,7 +74,7 @@ class TagInfoDialog extends StatelessWidget {
             const SizedBox(height: 8),
             _InfoRow(
               label: tr(language, 'color'),
-              value: '$colorLabel',
+              value: colorLabel,
               colorHex: colorHex,
             ),
             const SizedBox(height: 8),
@@ -71,12 +88,18 @@ class TagInfoDialog extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF9800),
+                  backgroundColor: const Color(0xFF667eea),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  elevation: 2,
+                  shadowColor: const Color(0xFF667eea).withOpacity(0.4),
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
                 child: Text(tr(language, 'closePopupBtn')),
               ),
@@ -118,8 +141,9 @@ class _InfoRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(8),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
         children: [

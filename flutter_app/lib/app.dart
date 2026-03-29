@@ -35,7 +35,7 @@ class _AppContent extends StatelessWidget {
         ),
         useMaterial3: true,
         fontFamily: 'Roboto',
-        scaffoldBackgroundColor: Colors.white,
+        scaffoldBackgroundColor: const Color(0xFFF4F6FB),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.white,
           foregroundColor: Color(0xFF333333),
