@@ -40,113 +40,168 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // ── Background colour helpers ─────────────────────────────────────────────
+
+  static Color _hexToFlutterColor(String hex) {
+    final cleaned = hex.replaceFirst('#', '');
+    final value = int.tryParse('FF$cleaned', radix: 16);
+    return value != null ? Color(value) : Colors.grey;
+  }
+
+  static Color _bgLight(String? hex) {
+    const base = Color(0xFFF4F6FB);
+    if (hex == null) return base;
+    return Color.lerp(base, _hexToFlutterColor(hex), 0.20)!;
+  }
+
+  static Color _bgDark(String? hex) {
+    const base = Color(0xFFE6EAF4);
+    if (hex == null) return base;
+    return Color.lerp(base, _hexToFlutterColor(hex), 0.38)!;
+  }
+
+  static Color _onBg(String? hex) {
+    final mid = Color.lerp(_bgLight(hex), _bgDark(hex), 0.5)!;
+    return mid.computeLuminance() > 0.45
+        ? const Color(0xFF1C1C2E)
+        : Colors.white;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AppProvider>(
       builder: (context, provider, _) {
         final lang = provider.settings.language;
+        final hex = provider.selectedColorHex;
+        final onBg = _onBg(hex);
+
         return Scaffold(
-          backgroundColor: Colors.white,
+          extendBodyBehindAppBar: true,
+          extendBody: true,
+          backgroundColor: Colors.transparent,
           appBar: AppBar(
-            backgroundColor: Colors.white,
+            backgroundColor: Colors.transparent,
             elevation: 0,
+            surfaceTintColor: Colors.transparent,
             title: Text(
               tr(lang, 'appTitle'),
-              style: const TextStyle(
-                fontSize: 17,
+              style: TextStyle(
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF333333),
+                color: onBg,
               ),
             ),
             actions: [
-              // NFC status indicator
               Padding(
                 padding: const EdgeInsets.only(right: 6),
                 child: Center(
                   child: _NfcStatusDot(available: _nfcChecked && _nfcAvailable),
                 ),
               ),
-              // Settings button
               IconButton(
-                icon: const Text('⚙️', style: TextStyle(fontSize: 20)),
+                icon: Icon(Icons.settings_rounded, color: onBg),
                 onPressed: () => _openSettings(context),
                 tooltip: tr(lang, 'setupTitle'),
               ),
             ],
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // NFC unavailable warning
-                if (_nfcChecked && !_nfcAvailable)
-                  _WarningBanner(message: tr(lang, 'nfcNotAvailable')),
-                // Manufacturer selector (optional)
-                if (provider.settings.useManufacturer)
-                  _SectionCard(
-                    title: tr(lang, 'manufacturerLabel'),
-                    child: _ManufacturerDropdown(lang: lang),
-                  ),
-                // Material selector
-                _SectionCard(
-                  title: tr(lang, 'materialLabel'),
-                  child: _MaterialDropdown(lang: lang),
-                ),
-                // Color selector
-                _SectionCard(
-                  title: tr(lang, 'colorLabel'),
-                  child: ColorGridWidget(
-                    colors: kDefaultColors,
-                    selectedHex: provider.selectedColorHex,
-                    language: lang,
-                    onColorSelected: (hex) => provider.selectColor(hex),
+          body: Stack(
+            children: [
+              // Full-screen animated gradient — always fills the whole window
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 450),
+                curve: Curves.easeInOut,
+                width: double.infinity,
+                height: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [_bgLight(hex), _bgDark(hex)],
                   ),
                 ),
-                const SizedBox(height: 6),
-                // Write button
-                _ActionButton(
-                  label: tr(lang, 'writeBtn'),
-                  color: const Color(0xFF4CAF50),
-                  gradientEnd: const Color(0xFF45a049),
-                  onPressed: provider.isBusy ? null : () => _writeTag(context, provider, lang),
-                ),
-                const SizedBox(height: 8),
-                // Read button
-                _ActionButton(
-                  label: tr(lang, 'readBtn'),
-                  color: const Color(0xFF2196F3),
-                  gradientEnd: const Color(0xFF1976D2),
-                  onPressed: provider.isBusy ? null : () => _readTag(context, provider, lang),
-                ),
-                const SizedBox(height: 8),
-                // Auto-detect toggle
-                Center(
-                  child: _AutoDetectButton(lang: lang),
-                ),
-                const SizedBox(height: 16),
-                // Loading indicator
-                if (provider.isBusy)
-                  Center(
-                    child: Column(
-                      children: [
-                        const CircularProgressIndicator(
-                          strokeWidth: 3,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667eea)),
+              ),
+              // Scrollable content on top of the gradient
+              SafeArea(
+                bottom: false,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, kToolbarHeight + 8, 16, 48),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // NFC unavailable warning
+                      if (_nfcChecked && !_nfcAvailable)
+                        _WarningBanner(message: tr(lang, 'nfcNotAvailable')),
+                      // Manufacturer selector (optional)
+                      if (provider.settings.useManufacturer)
+                        _GlassCard(
+                          title: tr(lang, 'manufacturerLabel'),
+                          child: _ManufacturerDropdown(lang: lang),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          tr(lang, 'loadingText'),
-                          style: const TextStyle(fontSize: 13),
+                      // Material selector
+                      _GlassCard(
+                        title: tr(lang, 'materialLabel'),
+                        child: _MaterialDropdown(lang: lang),
+                      ),
+                      // Color selector
+                      _GlassCard(
+                        title: tr(lang, 'colorLabel'),
+                        child: ColorGridWidget(
+                          colors: kDefaultColors,
+                          selectedHex: provider.selectedColorHex,
+                          language: lang,
+                          onColorSelected: (h) => provider.selectColor(h),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 4),
+                      // Write button
+                      _ActionButton(
+                        label: tr(lang, 'writeBtn'),
+                        color: const Color(0xFF4CAF50),
+                        onPressed: provider.isBusy
+                            ? null
+                            : () => _writeTag(context, provider, lang),
+                      ),
+                      const SizedBox(height: 10),
+                      // Read button
+                      _ActionButton(
+                        label: tr(lang, 'readBtn'),
+                        color: const Color(0xFF2196F3),
+                        onPressed: provider.isBusy
+                            ? null
+                            : () => _readTag(context, provider, lang),
+                      ),
+                      const SizedBox(height: 10),
+                      // Auto-detect toggle
+                      Center(child: _AutoDetectButton(lang: lang)),
+                      const SizedBox(height: 16),
+                      // Loading indicator
+                      if (provider.isBusy)
+                        Center(
+                          child: Column(
+                            children: [
+                              const CircularProgressIndicator(
+                                strokeWidth: 3,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF667eea),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                tr(lang, 'loadingText'),
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                      // Status message
+                      if (!provider.isBusy && provider.statusMessageKey != null)
+                        _StatusMessage(lang: lang),
+                    ],
                   ),
-                // Status message
-                if (!provider.isBusy && provider.statusMessageKey != null)
-                  _StatusMessage(lang: lang),
-              ],
-            ),
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -268,9 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       isDismissible: true,
       enableDrag: false,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (_) => _ScanBottomSheet(lang: lang),
     ).then((_) {
       // If the sheet was dismissed by the user, cancel any active NFC session
@@ -286,6 +339,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
 // ─── Supporting widgets ────────────────────────────────────────────────────
 
+const Color _kSuccessGreen = Color(0xFF28a745);
+const Color _kDangerRed = Color(0xFFdc3545);
+
 class _NfcStatusDot extends StatelessWidget {
   final bool available;
   const _NfcStatusDot({required this.available});
@@ -297,7 +353,16 @@ class _NfcStatusDot extends StatelessWidget {
       height: 10,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: available ? const Color(0xFF28a745) : const Color(0xFFdc3545),
+        color: available ? _kSuccessGreen : _kDangerRed,
+        boxShadow: available
+            ? [
+                BoxShadow(
+                  color: _kSuccessGreen.withOpacity(0.5),
+                  blurRadius: 6,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
       ),
     );
   }
@@ -310,23 +375,29 @@ class _WarningBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF3CD),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFFFEAA7)),
+        color: Colors.white.withOpacity(0.82),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFFD54F).withOpacity(0.8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
           const Icon(Icons.warning_amber_rounded,
-              color: Color(0xFF856404), size: 20),
-          const SizedBox(width: 8),
+              color: Color(0xFFF59E0B), size: 20),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
-                  color: Color(0xFF856404), fontSize: 13),
+              style: const TextStyle(color: Color(0xFF92400E), fontSize: 13),
             ),
           ),
         ],
@@ -335,29 +406,45 @@ class _WarningBanner extends StatelessWidget {
   }
 }
 
-class _SectionCard extends StatelessWidget {
+class _GlassCard extends StatelessWidget {
   final String title;
   final Widget child;
-  const _SectionCard({required this.title, required this.child});
+  const _GlassCard({required this.title, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF555555),
-            ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.82),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.07),
+            blurRadius: 16,
+            spreadRadius: 0,
+            offset: const Offset(0, 3),
           ),
-          const SizedBox(height: 8),
-          child,
         ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title.toUpperCase(),
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF8A8FA8),
+                letterSpacing: 1.1,
+              ),
+            ),
+            const SizedBox(height: 10),
+            child,
+          ],
+        ),
       ),
     );
   }
@@ -428,17 +515,17 @@ class _ManufacturerDropdown extends StatelessWidget {
 InputDecoration _inputDecoration() {
   return InputDecoration(
     contentPadding:
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 2),
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 2),
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       borderSide: const BorderSide(color: Color(0xFF667eea), width: 2),
     ),
     filled: true,
@@ -449,13 +536,11 @@ InputDecoration _inputDecoration() {
 class _ActionButton extends StatelessWidget {
   final String label;
   final Color color;
-  final Color gradientEnd;
   final VoidCallback? onPressed;
 
   const _ActionButton({
     required this.label,
     required this.color,
-    required this.gradientEnd,
     this.onPressed,
   });
 
@@ -466,18 +551,19 @@ class _ActionButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           backgroundColor: color,
           foregroundColor: Colors.white,
           disabledBackgroundColor: Colors.grey[300],
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
-          elevation: onPressed != null ? 2 : 0,
+          elevation: onPressed != null ? 3 : 0,
+          shadowColor: color.withOpacity(0.45),
           textStyle: const TextStyle(
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: FontWeight.bold,
-            letterSpacing: 0.4,
+            letterSpacing: 0.5,
           ),
         ),
         child: Text(label.toUpperCase()),
@@ -495,28 +581,41 @@ class _AutoDetectButton extends StatelessWidget {
     return Consumer<AppProvider>(
       builder: (context, provider, _) {
         final active = provider.autoReadActive;
-        return TextButton.icon(
-          onPressed: () => _toggleAutoRead(context, provider, lang),
-          icon: Text(
-            active ? '🟢' : '⭕',
-            style: const TextStyle(fontSize: 14),
-          ),
-          label: Text(
-            tr(lang, 'auto_detect'),
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: active ? const Color(0xFF28a745) : Colors.grey[700],
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: active
+                ? _kSuccessGreen.withOpacity(0.12)
+                : Colors.white.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: active
+                  ? _kSuccessGreen.withOpacity(0.4)
+                  : Colors.grey.withOpacity(0.3),
             ),
           ),
-          style: TextButton.styleFrom(
-            backgroundColor:
-                active ? const Color(0xFFD4EDDA) : Colors.grey[200],
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+          child: TextButton.icon(
+            onPressed: () => _toggleAutoRead(context, provider, lang),
+            icon: Icon(
+              active ? Icons.sensors : Icons.sensors_off,
+              size: 18,
+              color: active ? _kSuccessGreen : Colors.grey[600],
             ),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            label: Text(
+              tr(lang, 'auto_detect'),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: active ? _kSuccessGreen : Colors.grey[700],
+              ),
+            ),
+            style: TextButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            ),
           ),
         );
       },
@@ -596,36 +695,59 @@ class _StatusMessage extends StatelessWidget {
         final isError = provider.statusIsError;
         final isSuccess = provider.statusIsSuccess;
 
+        final bgColor = isError
+            ? const Color(0xFFFEE2E2)
+            : isSuccess
+                ? const Color(0xFFDCFCE7)
+                : const Color(0xFFDBEAFE);
+        final borderColor = isError
+            ? const Color(0xFFFCA5A5)
+            : isSuccess
+                ? const Color(0xFF86EFAC)
+                : const Color(0xFF93C5FD);
+        final textColor = isError
+            ? const Color(0xFF991B1B)
+            : isSuccess
+                ? const Color(0xFF166534)
+                : const Color(0xFF1E40AF);
+        final icon = isError
+            ? Icons.error_outline_rounded
+            : isSuccess
+                ? Icons.check_circle_outline_rounded
+                : Icons.info_outline_rounded;
+
         return Container(
           width: double.infinity,
           margin: const EdgeInsets.only(top: 4),
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: isError
-                ? const Color(0xFFF8D7DA)
-                : isSuccess
-                    ? const Color(0xFFD4EDDA)
-                    : const Color(0xFFD1ECF1),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isError
-                  ? const Color(0xFFF5C6CB)
-                  : isSuccess
-                      ? const Color(0xFFC3E6CB)
-                      : const Color(0xFFBEE5EB),
-            ),
+            color: bgColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: Text(
-            full,
-            style: TextStyle(
-              color: isError
-                  ? const Color(0xFF721C24)
-                  : isSuccess
-                      ? const Color(0xFF155724)
-                      : const Color(0xFF0C5460),
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-            ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 18, color: textColor),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  full,
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -639,25 +761,62 @@ class _ScanBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(28),
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(28, 24, 28, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.nfc, size: 64, color: Color(0xFF667eea)),
-          const SizedBox(height: 16),
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: 20),
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: const Color(0xFF667eea).withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.nfc_rounded, size: 44, color: Color(0xFF667eea)),
+          ),
+          const SizedBox(height: 18),
           Text(
             tr(lang, 'scanTagPrompt'),
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
+              color: Color(0xFF1C1C2E),
             ),
           ),
           const SizedBox(height: 20),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(tr(lang, 'cancelWarningBtn')),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                foregroundColor: const Color(0xFF667eea),
+                textStyle: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              child: Text(tr(lang, 'cancelWarningBtn')),
+            ),
           ),
         ],
       ),
