@@ -97,6 +97,17 @@ const Map<String, Map<String, dynamic>> kTranslations = {
     'resetListsSuccess': 'Listen auf Standard zurückgesetzt.',
     'scanTagPrompt': 'Halten Sie ein NFC-Tag ans Gerät…',
     'nfcSessionCancelled': 'NFC-Sitzung abgebrochen.',
+    'importCfgBtn': 'CFG-Datei importieren',
+    'exportCfgBtn': 'CFG-Datei exportieren',
+    'importCfgConfirmTitle': 'Aus Datei importieren',
+    'importCfgConfirmMsg':
+        'Alle aktuellen Materialien und Hersteller durch Einträge aus der ausgewählten Datei ersetzen? Diese Aktion kann nicht rückgängig gemacht werden.',
+    'importCfgSuccess': 'Materialien erfolgreich importiert!',
+    'importCfgError':
+        'Datei konnte nicht verarbeitet werden. Bitte stelle sicher, dass es eine gültige official_filas_list.cfg ist.',
+    'exportCfgError': 'Datei konnte nicht exportiert werden.',
+    'materialNameRequired': 'Materialname ist erforderlich.',
+    'materialCodeRequired': 'Bitte wählen Sie einen Code aus.',
     'colors': {
       '#FAFAFA': 'Weiß',
       '#060606': 'Schwarz',
@@ -215,6 +226,17 @@ const Map<String, Map<String, dynamic>> kTranslations = {
     'resetListsSuccess': 'Lists reset to defaults.',
     'scanTagPrompt': 'Hold an NFC tag to the device…',
     'nfcSessionCancelled': 'NFC session cancelled.',
+    'importCfgBtn': 'Import .cfg File',
+    'exportCfgBtn': 'Export .cfg File',
+    'importCfgConfirmTitle': 'Import from File',
+    'importCfgConfirmMsg':
+        'Replace all current materials and manufacturers with entries from the selected file? This cannot be undone.',
+    'importCfgSuccess': 'Materials imported successfully!',
+    'importCfgError':
+        'Could not parse file. Please ensure it is a valid official_filas_list.cfg.',
+    'exportCfgError': 'Failed to export file.',
+    'materialNameRequired': 'Material name is required.',
+    'materialCodeRequired': 'Please select a code.',
     'colors': {
       '#FAFAFA': 'White',
       '#060606': 'Black',
@@ -333,6 +355,17 @@ const Map<String, Map<String, dynamic>> kTranslations = {
     'resetListsSuccess': 'Listas restablecidas a los valores predeterminados.',
     'scanTagPrompt': 'Acerque una etiqueta NFC al dispositivo…',
     'nfcSessionCancelled': 'Sesión NFC cancelada.',
+    'importCfgBtn': 'Importar archivo .cfg',
+    'exportCfgBtn': 'Exportar archivo .cfg',
+    'importCfgConfirmTitle': 'Importar desde archivo',
+    'importCfgConfirmMsg':
+        '¿Reemplazar todos los materiales y fabricantes actuales por las entradas del archivo seleccionado? Esta acción no se puede deshacer.',
+    'importCfgSuccess': '¡Materiales importados con éxito!',
+    'importCfgError':
+        'No se pudo procesar el archivo. Asegúrese de que sea un official_filas_list.cfg válido.',
+    'exportCfgError': 'No se pudo exportar el archivo.',
+    'materialNameRequired': 'El nombre del material es obligatorio.',
+    'materialCodeRequired': 'Por favor seleccione un código.',
     'colors': {
       '#FAFAFA': 'Blanco',
       '#060606': 'Negro',
@@ -452,6 +485,17 @@ const Map<String, Map<String, dynamic>> kTranslations = {
     'resetListsSuccess': 'Listas restauradas para os padrões.',
     'scanTagPrompt': 'Aproxime uma etiqueta NFC do dispositivo…',
     'nfcSessionCancelled': 'Sessão NFC cancelada.',
+    'importCfgBtn': 'Importar arquivo .cfg',
+    'exportCfgBtn': 'Exportar arquivo .cfg',
+    'importCfgConfirmTitle': 'Importar do arquivo',
+    'importCfgConfirmMsg':
+        'Substituir todos os materiais e fabricantes atuais pelas entradas do arquivo selecionado? Essa ação não pode ser desfeita.',
+    'importCfgSuccess': 'Materiais importados com sucesso!',
+    'importCfgError':
+        'Não foi possível processar o arquivo. Certifique-se de que é um official_filas_list.cfg válido.',
+    'exportCfgError': 'Falha ao exportar o arquivo.',
+    'materialNameRequired': 'O nome do material é obrigatório.',
+    'materialCodeRequired': 'Selecione um código.',
     'colors': {
       '#FAFAFA': 'Branco',
       '#060606': 'Preto',
@@ -571,6 +615,17 @@ const Map<String, Map<String, dynamic>> kTranslations = {
     'resetListsSuccess': 'Listes réinitialisées aux valeurs par défaut.',
     'scanTagPrompt': 'Approchez un tag NFC de l\'appareil…',
     'nfcSessionCancelled': 'Session NFC annulée.',
+    'importCfgBtn': 'Importer un fichier .cfg',
+    'exportCfgBtn': 'Exporter en .cfg',
+    'importCfgConfirmTitle': 'Importer depuis le fichier',
+    'importCfgConfirmMsg':
+        "Remplacer tous les matériaux et fabricants actuels par les entrées du fichier sélectionné\u00a0? Cette action est irréversible.",
+    'importCfgSuccess': 'Matériaux importés avec succès\u00a0!',
+    'importCfgError':
+        "Impossible de traiter le fichier. Assurez-vous qu'il s'agit d'un official_filas_list.cfg valide.",
+    'exportCfgError': "Échec de l'exportation du fichier.",
+    'materialNameRequired': 'Le nom du matériau est requis.',
+    'materialCodeRequired': 'Veuillez sélectionner un code.',
     'colors': {
       '#FAFAFA': 'Blanc',
       '#060606': 'Noir',
@@ -681,6 +736,15 @@ const Map<String, Map<String, dynamic>> kTranslations = {
     'resetListsSuccess': '列表已重置为默认值。',
     'scanTagPrompt': '将NFC标签靠近设备…',
     'nfcSessionCancelled': 'NFC会话已取消。',
+    'importCfgBtn': '导入 .cfg 文件',
+    'exportCfgBtn': '导出 .cfg 文件',
+    'importCfgConfirmTitle': '从文件导入',
+    'importCfgConfirmMsg': '将当前所有材料和制造商替换为所选文件中的条目？此操作无法撤销。',
+    'importCfgSuccess': '材料导入成功！',
+    'importCfgError': '无法解析文件。请确保它是有效的 official_filas_list.cfg 文件。',
+    'exportCfgError': '导出文件失败。',
+    'materialNameRequired': '材料名称不能为空。',
+    'materialCodeRequired': '请选择一个代码。',
     'colors': {
       '#FAFAFA': '白色',
       '#060606': '黑色',
